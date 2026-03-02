@@ -1,0 +1,19 @@
+{
+    "name": "eventbrite-proxy",
+    "version": "1.0.0"
+  }
+  ```
+  
+  **Create `api/events.js`** — paste the full function from earlier.
+  
+  **Create `.env`** (local testing only):
+  ```
+  EVENTBRITE_TOKEN=your_token_here
+  EVENTBRITE_ORG_ID=your_org_id_here
+  ```
+  
+  > ⚠️ Create a `.gitignore` file and add `.env` to it so your secrets never get uploaded to GitHub.
+  ```
+  # .gitignore
+  .env
+  node_modules
