@@ -3,8 +3,6 @@ export default async function handler(req, res) {
     const EVENTBRITE_TOKEN = process.env.EVENTBRITE_TOKEN;
     const ORG_ID = process.env.EVENTBRITE_ORG_ID;
 
-    console.log(EVENTBRITE_TOKEN);
-    console.log(ORG_ID);
     try {
       const response = await fetch(
         `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?status=live`,
