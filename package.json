@@ -1,8 +1,5 @@
 {
     "name": "eventbrite-proxy",
     "version": "1.0.0"
-  }
+}
   
-  # .gitignore
-  .env
-  node_modules
