@@ -7,8 +7,10 @@ export default async function handler(req, res) {
       const response = await fetch(
         `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?status=live`,
         {
+          method: 'GET',
           headers: {
-            Authorization: `Bearer ${EVENTBRITE_TOKEN}`,
+            'Authorization': `Bearer ${EVENTBRITE_TOKEN}`,
+            'Content-Type': 'application/json'
           },
         }
       );
