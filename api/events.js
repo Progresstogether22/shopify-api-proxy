@@ -18,12 +18,12 @@ export default async function handler(req, res) {
       const data = await response.json();
 
       if (!response.ok) {
-        res.setHeader("Access-Control-Allow-Origin", "https://a-siege-of-herons-ltd.myshopify.com");
+        res.setHeader("Access-Control-Allow-Origin", "https://krywbf-rv.myshopify.com");
         return res.status(response.status).json({ error: data.error_description || data.error || "Eventbrite API error" });
       }
 
       // Allow requests from your Shopify store only
-      res.setHeader("Access-Control-Allow-Origin", "https://a-siege-of-herons-ltd.myshopify.com");
+      res.setHeader("Access-Control-Allow-Origin", "https://krywbf-rv.myshopify.com");
       res.status(200).json(data.events ?? []);
     } catch (err) {
       res.status(500).json({ error: "Failed to fetch events" });

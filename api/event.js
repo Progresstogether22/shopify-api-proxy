@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   const EVENTBRITE_TOKEN = process.env.EVENTBRITE_TOKEN;
   const { id } = req.query;
 
-  res.setHeader("Access-Control-Allow-Origin", "https://a-siege-of-herons-ltd.myshopify.com");
+  res.setHeader("Access-Control-Allow-Origin", "https://krywbf-rv.myshopify.com");
 
   if (!id) return res.status(400).json({ error: "Missing event id" });
 
