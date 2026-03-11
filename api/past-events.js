@@ -4,7 +4,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?time_filter=past&order_by=start_desc`,
+      `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?order_by=start_desc`,
       {
         method: 'GET',
         headers: {
@@ -21,8 +21,10 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: data.error_description || data.error || "Eventbrite API error" });
     }
 
+    const now = new Date();
+    const pastEvents = (data.events ?? []).filter(ev => new Date(ev.start.utc) < now);
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).json(data.events ?? []);
+    res.status(200).json(pastEvents);
   } catch (err) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.status(500).json({ error: "Failed to fetch past events" });
