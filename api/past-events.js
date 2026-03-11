@@ -4,7 +4,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?time_filter=start_past&order_by=start_desc`,
+      `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?time_filter=past&order_by=start_desc`,
       {
         method: 'GET',
         headers: {
