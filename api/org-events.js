@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   try {
     // Use cached attendees if still valid
     if (attendeeCache && Date.now() < cacheExpiry) {
-      return res.status(200).json(filterAndBuildResponse(attendeeCache, orgLower, EVENTBRITE_TOKEN));
+      return res.status(200).json(await filterAndBuildResponse(attendeeCache, orgLower, EVENTBRITE_TOKEN));
     }
 
     // Fetch all attendees across all pages
