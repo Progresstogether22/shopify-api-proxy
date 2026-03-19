@@ -1,0 +1,34 @@
+function getMailchimpAuth() {
+  const apiKey = process.env.MAILCHIMP_API_KEY;
+  if (!apiKey) throw new Error('Missing MAILCHIMP_API_KEY');
+  const dc = apiKey.split('-').pop();
+  const auth = Buffer.from(`anystring:${apiKey}`).toString('base64');
+  return { dc, auth };
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    const { dc, auth } = getMailchimpAuth();
+    const count = req.query.count || 50;
+
+    const url = `https://${dc}.api.mailchimp.com/3.0/campaigns?status=sent&count=${count}&sort_field=send_time&sort_dir=DESC&fields=campaigns.id,campaigns.settings.subject_line,campaigns.settings.preview_text,campaigns.send_time,campaigns.archive_url,campaigns.emails_sent`;
+
+    const mcRes = await fetch(url, {
+      headers: { Authorization: `Basic ${auth}` },
+    });
+
+    const data = await mcRes.json();
+    if (!mcRes.ok) throw new Error(data.detail || 'Mailchimp API error');
+
+    return res.status(200).json({ campaigns: data.campaigns || [] });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}

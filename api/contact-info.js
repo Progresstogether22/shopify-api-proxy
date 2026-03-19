@@ -1,6 +1,6 @@
 let sfToken = null;
 let sfTokenExpiry = 0;
-const SF_TOKEN_TTL = 55 * 60 * 1000; // 55 minutes (tokens last 1 hour)
+const SF_TOKEN_TTL = 55 * 60 * 1000;
 
 async function getSalesforceToken() {
   if (sfToken && Date.now() < sfTokenExpiry) return sfToken;
@@ -27,52 +27,34 @@ async function getSalesforceToken() {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { email, url, title } = req.body;
-  if (!email || !url) return res.status(400).json({ error: 'Missing email or url' });
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: 'Missing email' });
 
   try {
     const { access_token, instance_url } = await getSalesforceToken();
     const apiBase = `${instance_url}/services/data/v58.0`;
 
-    // Look up Contact by email
-    const query = `SELECT Id FROM Contact WHERE Email = '${email.replace(/'/g, "\\'")}' LIMIT 1`;
+    const query = `SELECT Membership_Start_Date__c, Next_Renewal_Date__c FROM Contact WHERE Email = '${email.replace(/'/g, "\\'")}' LIMIT 1`;
     const contactRes = await fetch(`${apiBase}/query?q=${encodeURIComponent(query)}`, {
       headers: { Authorization: `Bearer ${access_token}` },
     });
+
     const contactData = await contactRes.json();
     const contact = contactData.records?.[0];
 
-    // Create Task
-    const taskBody = {
-      Subject: `Downloaded: ${title || url}`,
-      Status: 'Completed',
-      ActivityDate: new Date().toISOString().split('T')[0],
-      Description: url,
-      isDownload__c: true,
-      Web_Asset_Name__c: title || url,
-    };
-    if (contact) taskBody.WhoId = contact.Id;
+    if (!contact) return res.status(404).json({ error: 'Contact not found' });
 
-    const taskRes = await fetch(`${apiBase}/sobjects/Task/`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(taskBody),
+    return res.status(200).json({
+      membership_start_date: contact.Membership_Start_Date__c,
+      next_renewal_date: contact.Next_Renewal_Date__c,
     });
-
-    const taskData = await taskRes.json();
-    if (!taskRes.ok) return res.status(500).json({ error: taskData[0]?.message || 'Task creation failed' });
-
-    return res.status(200).json({ success: true, taskId: taskData.id, contactFound: !!contact });
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Failed to track download' });
+    return res.status(500).json({ error: err.message || 'Failed to fetch contact' });
   }
 }
