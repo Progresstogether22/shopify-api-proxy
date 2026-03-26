@@ -8,15 +8,6 @@ function shopifyHeaders() {
   };
 }
 
-async function findCustomerByEmail(email) {
-  const res = await fetch(
-    `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/search.json?query=email:${encodeURIComponent(email)}&limit=1`,
-    { headers: shopifyHeaders() }
-  );
-  const data = await res.json();
-  return data.customers?.[0] ?? null;
-}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -24,16 +15,29 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const email = req.method === 'GET' ? req.query.email : req.body?.email;
-  if (!email) return res.status(400).json({ error: 'Missing email' });
+  // Accept customerId directly (preferred) or fall back to email search
+  const customerId = req.method === 'GET' ? req.query.customerId : req.body?.customerId;
+  const email      = req.method === 'GET' ? req.query.email      : req.body?.email;
+
+  if (!customerId && !email) return res.status(400).json({ error: 'Missing customerId or email' });
 
   try {
-    const customer = await findCustomerByEmail(email);
-    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    let resolvedId = customerId;
+
+    if (!resolvedId) {
+      const searchRes = await fetch(
+        `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/search.json?query=email:${encodeURIComponent(email)}&limit=1`,
+        { headers: shopifyHeaders() }
+      );
+      const searchData = await searchRes.json();
+      const customer = searchData.customers?.[0];
+      if (!customer) return res.status(404).json({ error: 'Customer not found' });
+      resolvedId = customer.id;
+    }
 
     if (req.method === 'GET') {
       const mfRes = await fetch(
-        `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${customer.id}/metafields.json?namespace=custom&key=interests`,
+        `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields.json?namespace=custom&key=interests`,
         { headers: shopifyHeaders() }
       );
       const mfData = await mfRes.json();
@@ -47,7 +51,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(interests)) return res.status(400).json({ error: 'interests must be an array' });
 
       const mfListRes = await fetch(
-        `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${customer.id}/metafields.json?namespace=custom&key=interests`,
+        `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields.json?namespace=custom&key=interests`,
         { headers: shopifyHeaders() }
       );
       const mfListData = await mfListRes.json();
@@ -57,7 +61,7 @@ export default async function handler(req, res) {
       let mfRes;
       if (existing) {
         mfRes = await fetch(
-          `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${customer.id}/metafields/${existing.id}.json`,
+          `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields/${existing.id}.json`,
           {
             method: 'PUT',
             headers: shopifyHeaders(),
@@ -66,7 +70,7 @@ export default async function handler(req, res) {
         );
       } else {
         mfRes = await fetch(
-          `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${customer.id}/metafields.json`,
+          `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields.json`,
           {
             method: 'POST',
             headers: shopifyHeaders(),
