@@ -1,9 +1,38 @@
 const STORE_DOMAIN = 'krywbf-rv.myshopify.com';
 const API_VERSION = '2025-01';
 
-function shopifyHeaders() {
+// In-memory token cache (best-effort within a warm function instance)
+let cachedToken = null;
+let tokenExpiresAt = 0;
+
+async function getToken() {
+  if (cachedToken && Date.now() < tokenExpiresAt - 60_000) return cachedToken;
+
+  const response = await fetch(
+    `https://${STORE_DOMAIN}/admin/oauth/access_token`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: process.env.SHOPIFY_CLIENT_ID,
+        client_secret: process.env.SHOPIFY_CLIENT_SECRET,
+      }),
+    }
+  );
+
+  if (!response.ok) throw new Error(`Token request failed: ${response.status}`);
+
+  const { access_token, expires_in } = await response.json();
+  cachedToken = access_token;
+  tokenExpiresAt = Date.now() + expires_in * 1000;
+  return cachedToken;
+}
+
+async function shopifyHeaders() {
+  const token = await getToken();
   return {
-    'X-Shopify-Access-Token': process.env.SHOPIFY_ADMIN_TOKEN,
+    'X-Shopify-Access-Token': token,
     'Content-Type': 'application/json',
   };
 }
@@ -15,19 +44,20 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Accept customerId directly (preferred) or fall back to email search
   const customerId = req.method === 'GET' ? req.query.customerId : req.body?.customerId;
   const email      = req.method === 'GET' ? req.query.email      : req.body?.email;
 
   if (!customerId && !email) return res.status(400).json({ error: 'Missing customerId or email' });
 
   try {
+    const headers = await shopifyHeaders();
+
     let resolvedId = customerId;
 
     if (!resolvedId) {
       const searchRes = await fetch(
         `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/search.json?query=email:${encodeURIComponent(email)}&limit=1`,
-        { headers: shopifyHeaders() }
+        { headers }
       );
       const searchData = await searchRes.json();
       const customer = searchData.customers?.[0];
@@ -38,7 +68,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const mfRes = await fetch(
         `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields.json?namespace=custom&key=interests`,
-        { headers: shopifyHeaders() }
+        { headers }
       );
       const mfData = await mfRes.json();
       const metafield = mfData.metafields?.[0];
@@ -52,7 +82,7 @@ export default async function handler(req, res) {
 
       const mfListRes = await fetch(
         `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields.json?namespace=custom&key=interests`,
-        { headers: shopifyHeaders() }
+        { headers }
       );
       const mfListData = await mfListRes.json();
       const existing = mfListData.metafields?.[0];
@@ -64,7 +94,7 @@ export default async function handler(req, res) {
           `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields/${existing.id}.json`,
           {
             method: 'PUT',
-            headers: shopifyHeaders(),
+            headers,
             body: JSON.stringify({ metafield: { id: existing.id, value, type: 'json' } }),
           }
         );
@@ -73,7 +103,7 @@ export default async function handler(req, res) {
           `https://${STORE_DOMAIN}/admin/api/${API_VERSION}/customers/${resolvedId}/metafields.json`,
           {
             method: 'POST',
-            headers: shopifyHeaders(),
+            headers,
             body: JSON.stringify({
               metafield: { namespace: 'custom', key: 'interests', value, type: 'json' },
             }),
