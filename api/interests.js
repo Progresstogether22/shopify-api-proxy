@@ -21,7 +21,10 @@ async function getToken() {
     }
   );
 
-  if (!response.ok) throw new Error(`Token request failed: ${response.status}`);
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Token request failed: ${response.status} — ${body}`);
+  }
 
   const { access_token, expires_in } = await response.json();
   cachedToken = access_token;
