@@ -3,6 +3,7 @@ const API_VERSION  = '2025-01';
 let _sfToken = null, _sfTokenExp = 0;
 
 async function getShopifyToken() {
+  if (process.env.SHOPIFY_ACCESS_TOKEN) return process.env.SHOPIFY_ACCESS_TOKEN;
   if (_sfToken && Date.now() < _sfTokenExp - 60_000) return _sfToken;
   const r = await fetch(`https://${STORE_DOMAIN}/admin/oauth/access_token`, {
     method: 'POST',
