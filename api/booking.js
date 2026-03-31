@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       const ordersData = await ordersRes.json();
       if (ordersRes.ok) {
         const orders = ordersData.orders || [];
-        const match = orders.find(o => o.email?.toLowerCase() === email.toLowerCase());
+        const match = orders.find(o => o.email?.toLowerCase() === email.toLowerCase() && o.status !== 'cancelled' && o.status !== 'refunded');
         if (match) return res.status(200).json({ booked: true, order_id: match.id });
       }
 
