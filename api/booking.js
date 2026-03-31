@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     try {
       const response = await fetch(
-        `https://www.eventbriteapi.com/v3/events/${event_id}/attendees/?search=${encodeURIComponent(email)}`,
+        `https://www.eventbriteapi.com/v3/events/${event_id}/attendees/?search=${encodeURIComponent(email)}&expand=order`,
         { headers: { Authorization: `Bearer ${EVENTBRITE_TOKEN}` } }
       );
       const data = await response.json();
@@ -24,7 +24,9 @@ export default async function handler(req, res) {
       const match = attendees.find(
         a => a.profile?.email?.toLowerCase() === email.toLowerCase() && a.cancelled === false
       );
-      return res.status(200).json(match ? { booked: true, order_id: match.order_id } : { booked: false });
+      if (!match) return res.status(200).json({ booked: false });
+      const orderId = match.order_id || match.order?.id;
+      return res.status(200).json(orderId ? { booked: true, order_id: orderId } : { booked: false });
     } catch (err) {
       return res.status(500).json({ error: 'Failed to check booking' });
     }
