@@ -13,46 +13,33 @@ export default async function handler(req, res) {
     if (!event_id || !email) return res.status(400).json({ error: 'Missing event_id or email' });
 
     try {
-      // Use orders endpoint with email filter
+      // Fetch all orders and filter by email
       const ordersRes = await fetch(
-        `https://www.eventbriteapi.com/v3/events/${event_id}/orders/?only_emails[]=${encodeURIComponent(email)}`,
+        `https://www.eventbriteapi.com/v3/events/${event_id}/orders/`,
         { headers: { Authorization: `Bearer ${EVENTBRITE_TOKEN}` } }
       );
       const ordersData = await ordersRes.json();
+      if (ordersRes.ok) {
+        const orders = ordersData.orders || [];
+        const match = orders.find(o => o.email?.toLowerCase() === email.toLowerCase());
+        if (match) return res.status(200).json({ booked: true, order_id: match.id });
+      }
 
-      // Attendees search
+      // Fallback: fetch all attendees and filter by email
       const attRes = await fetch(
-        `https://www.eventbriteapi.com/v3/events/${event_id}/attendees/?search=${encodeURIComponent(email)}&expand=order`,
+        `https://www.eventbriteapi.com/v3/events/${event_id}/attendees/`,
         { headers: { Authorization: `Bearer ${EVENTBRITE_TOKEN}` } }
       );
       const attData = await attRes.json();
-
-      const orders = ordersData.orders || [];
-      const match = orders.find(o => o.email?.toLowerCase() === email.toLowerCase());
-      if (match) return res.status(200).json({ booked: true, order_id: match.id });
-
-      const attendees = (attData.attendees || []).filter(a => a.cancelled === false);
-      const att = attendees.find(a => a.profile?.email?.toLowerCase() === email.toLowerCase());
-      if (att) {
-        const orderId = att.order_id || att.order?.id;
-        if (orderId) return res.status(200).json({ booked: true, order_id: orderId });
+      if (attRes.ok) {
+        const attendees = (attData.attendees || []).filter(a => a.cancelled === false);
+        const att = attendees.find(a => a.profile?.email?.toLowerCase() === email.toLowerCase());
+        if (att && att.order_id) return res.status(200).json({ booked: true, order_id: att.order_id });
       }
 
-      return res.status(200).json({
-        booked: false,
-        _debug: {
-          ordersStatus: ordersRes.status,
-          ordersCount: orders.length,
-          ordersError: ordersData.error_description || null,
-          ordersEmails: orders.map(o => o.email),
-          attendeesStatus: attRes.status,
-          attendeesCount: attData.attendees?.length || 0,
-          attendeesEmails: (attData.attendees || []).map(a => a.profile?.email),
-          attendeesOrderIds: (attData.attendees || []).map(a => a.order_id),
-        }
-      });
+      return res.status(200).json({ booked: false });
     } catch (err) {
-      return res.status(500).json({ error: 'Failed to check booking', detail: err.message });
+      return res.status(500).json({ error: 'Failed to check booking' });
     }
   }
 
