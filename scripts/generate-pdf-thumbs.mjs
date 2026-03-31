@@ -139,7 +139,7 @@ async function uploadImageToShopify(_token, imagePath, filename) {
   const mimeType   = imagePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
   const dataBase64 = fileBuffer.toString('base64');
 
-  const res = await fetch(`${PROXY_URL}/api/upload-file`, {
+  const res = await fetch(`${PROXY_URL}/api/booking`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename, mimeType, dataBase64 }),
