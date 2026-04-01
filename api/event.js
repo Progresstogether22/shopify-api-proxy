@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://www.eventbriteapi.com/v3/events/${id}/?expand=venue,description`,
+      `https://www.eventbriteapi.com/v3/events/${id}/?expand=venue,description,organizer,format,ticket_classes`,
       { headers: { Authorization: `Bearer ${EVENTBRITE_TOKEN}` } }
     );
     const data = await response.json();
