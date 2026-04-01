@@ -19,6 +19,7 @@ export default async function handler(req, res) {
 
     if (contentRes.ok) {
       const content = await contentRes.json();
+      data._structured = content; // debug: expose raw structured content
       const modules = content.modules || [];
       const speakers = [];
       modules.forEach(function (mod) {
