@@ -108,7 +108,7 @@ export default async function handler(req, res) {
       Object.assign(urlMap, await resolveNodes(token, chunk));
     }
 
-    // 3. Build final resource list
+    // 3. Build intermediate resource list
     const resources = rawResources.map(({ handle, fields }) => ({
       handle,
       title:        fields.title       || '',
@@ -120,6 +120,47 @@ export default async function handler(req, res) {
       thumbnail:    urlMap[fields.thumbnail]  || null,
       members_only: fields.members_only === 'true',
     }));
+
+    // 4. Fetch YouTube descriptions for video resources with no manual description
+    const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+    if (YOUTUBE_API_KEY) {
+      function extractYouTubeId(url) {
+        if (!url) return null;
+        const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|v\/))([^?&"'>]+)/);
+        return match ? match[1] : null;
+      }
+
+      // Collect video IDs for resources without a description
+      const videoIdMap = {}; // ytId -> resource index
+      resources.forEach((r, i) => {
+        if (r.video_url && !r.description) {
+          const ytId = extractYouTubeId(r.video_url);
+          if (ytId) videoIdMap[ytId] = i;
+        }
+      });
+
+      const videoIds = Object.keys(videoIdMap);
+      if (videoIds.length) {
+        // YouTube API allows up to 50 IDs per request
+        for (let i = 0; i < videoIds.length; i += 50) {
+          const chunk = videoIds.slice(i, i + 50);
+          try {
+            const ytRes = await fetch(
+              `https://www.googleapis.com/youtube/v3/videos?id=${chunk.join(',')}&part=snippet&key=${YOUTUBE_API_KEY}`
+            );
+            if (ytRes.ok) {
+              const ytData = await ytRes.json();
+              for (const item of (ytData.items || [])) {
+                const idx = videoIdMap[item.id];
+                if (idx !== undefined && item.snippet && item.snippet.description) {
+                  resources[idx].description = item.snippet.description;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    }
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     return res.status(200).json({ resources });
