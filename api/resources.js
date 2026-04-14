@@ -114,7 +114,17 @@ export default async function handler(req, res) {
       title:        fields.title       || '',
       description:  fields.description || '',
       category:     (fields.category   || '').trim(),
-      tags:         (fields.tag        || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean),
+      tags:         (() => {
+        const raw = (fields.tag || '').trim();
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed)
+            ? parsed.map(t => String(t).trim().toLowerCase()).filter(Boolean)
+            : [String(parsed).trim().toLowerCase()].filter(Boolean);
+        } catch (_) {
+          return raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        }
+      })(),
       file_url:     urlMap[fields.file]       || '',
       video_url:    fields.url               || '',
       thumbnail:    urlMap[fields.thumbnail]  || null,
