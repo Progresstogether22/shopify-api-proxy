@@ -129,8 +129,8 @@ export default async function handler(req, res) {
       video_url:    fields.url               || '',
       thumbnail:    urlMap[fields.thumbnail]  || null,
       members_only: fields.public_file !== undefined
-        ? fields.public_file === 'false'   // public_file: false → members-only
-        : fields.members_only === 'true',  // legacy key
+        ? fields.public_file === 'false'   // new key: false = not public = members-only
+        : fields.members_only === 'false', // old key, now relabelled "Public File": false = not public = members-only
     }));
 
     // 4. Fetch YouTube descriptions for video resources with no manual description
