@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const since = new Date();
     since.setFullYear(since.getFullYear() - 1);
     const sinceStr = since.toISOString().slice(0, 19).replace('T', ' ');
-    const url = `https://${dc}.api.mailchimp.com/3.0/campaigns?status=sent&count=${count}&sort_field=send_time&sort_dir=DESC&since_send_time=${encodeURIComponent(sinceStr)}&fields=campaigns.id,campaigns.settings.subject_line,campaigns.settings.preview_text,campaigns.send_time,campaigns.archive_url,campaigns.emails_sent`;
+    const url = `https://${dc}.api.mailchimp.com/3.0/campaigns?status=sent&count=${count}&sort_field=send_time&sort_dir=DESC&since_send_time=${encodeURIComponent(sinceStr)}&fields=campaigns.id,campaigns.settings.title,campaigns.settings.subject_line,campaigns.settings.preview_text,campaigns.send_time,campaigns.archive_url,campaigns.emails_sent`;
     const mcRes = await fetch(url, { headers });
     const data = await mcRes.json();
     if (!mcRes.ok) throw new Error(data.detail || 'Mailchimp API error');
