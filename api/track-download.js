@@ -50,19 +50,21 @@ export default async function handler(req, res) {
     const contact = contactData.records?.[0];
 
     let whoId = contact?.Id;
+    const debug = { contactFound: !!contact };
 
     // No contact found — look up or create a Lead so name+email are captured
-    if (!whoId && email) {
-      const leadRes = await fetch(`${apiBase}/query?q=${encodeURIComponent(`SELECT Id FROM Lead WHERE Email = '${safeEmail}' LIMIT 1`)}`, {
+    if (!whoId) {
+      const leadQueryRes = await fetch(`${apiBase}/query?q=${encodeURIComponent(`SELECT Id FROM Lead WHERE Email = '${safeEmail}' LIMIT 1`)}`, {
         headers: { Authorization: `Bearer ${access_token}` },
       });
-      const leadData = await leadRes.json();
-      const existingLead = leadData.records?.[0];
+      const leadQueryData = await leadQueryRes.json();
+      const existingLead = leadQueryData.records?.[0];
 
       if (existingLead) {
         whoId = existingLead.Id;
-      } else if (name) {
-        const parts = name.trim().split(/\s+/);
+        debug.leadFound = true;
+      } else {
+        const parts = (name || email).trim().split(/\s+/);
         const lastName  = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
         const firstName = parts.length > 1 ? parts[0] : '';
         const newLeadRes = await fetch(`${apiBase}/sobjects/Lead/`, {
@@ -71,7 +73,12 @@ export default async function handler(req, res) {
           body: JSON.stringify({ FirstName: firstName, LastName: lastName, Email: email, Company: 'Unknown', LeadSource: 'Web' }),
         });
         const newLeadData = await newLeadRes.json();
-        if (newLeadRes.ok) whoId = newLeadData.id;
+        if (newLeadRes.ok && newLeadData.id) {
+          whoId = newLeadData.id;
+          debug.leadCreated = true;
+        } else {
+          debug.leadError = newLeadData;
+        }
       }
     }
 
@@ -88,17 +95,14 @@ export default async function handler(req, res) {
 
     const taskRes = await fetch(`${apiBase}/sobjects/Task/`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(taskBody),
     });
 
     const taskData = await taskRes.json();
-    if (!taskRes.ok) return res.status(500).json({ error: taskData[0]?.message || 'Task creation failed' });
+    if (!taskRes.ok) return res.status(500).json({ error: taskData[0]?.message || 'Task creation failed', taskError: taskData, debug });
 
-    return res.status(200).json({ success: true, taskId: taskData.id, contactFound: !!contact, whoId: whoId || null });
+    return res.status(200).json({ success: true, taskId: taskData.id, whoId: whoId || null, debug });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to track download' });
   }
