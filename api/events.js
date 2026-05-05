@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     }
 
     const now = new Date();
-    let events = data.events ?? [];
+    let events = (data.events ?? []).filter(ev => ev.status === 'live' || ev.status === 'started');
 
     if (type === 'future') {
       events = events.filter(ev => new Date(ev.start.utc) >= now);
