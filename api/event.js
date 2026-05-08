@@ -19,10 +19,15 @@ export default async function handler(req, res) {
 
     if (contentRes.ok) {
       const content = await contentRes.json();
-      data._structured = content; // debug: expose raw structured content
       const modules = content.modules || [];
       const speakers = [];
+      const descParts = [];
+
       modules.forEach(function (mod) {
+        if (mod.type === 'text' && mod.data && mod.data.body) {
+          const html = mod.data.body.html || mod.data.body.text || '';
+          if (html) descParts.push(html);
+        }
         if (mod.type === 'speaker_list' && Array.isArray(mod.data.speakers)) {
           mod.data.speakers.forEach(function (s) {
             const p = s.profile || {};
@@ -35,6 +40,8 @@ export default async function handler(req, res) {
           });
         }
       });
+
+      if (descParts.length) data._fullDescription = descParts.join('');
       if (speakers.length) data.speakers = speakers;
     }
 
