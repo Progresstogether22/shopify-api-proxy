@@ -125,9 +125,10 @@ export default async function handler(req, res) {
           return raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
         }
       })(),
-      file_url:     urlMap[fields.file]       || '',
-      video_url:    fields.url               || '',
-      thumbnail:    urlMap[fields.thumbnail]  || null,
+      file_url:      urlMap[fields.file]       || '',
+      video_url:     fields.url               || '',
+      thumbnail:     urlMap[fields.thumbnail]  || null,
+      publish_date:  fields.publish_date       || null,
       members_only: fields.public_file !== undefined
         ? fields.public_file === 'false'   // new key: false = not public = members-only
         : fields.members_only === 'false', // old key, now relabelled "Public File": false = not public = members-only
