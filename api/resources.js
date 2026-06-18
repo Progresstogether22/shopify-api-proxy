@@ -108,8 +108,8 @@ export default async function handler(req, res) {
       Object.assign(urlMap, await resolveNodes(token, chunk));
     }
 
-    // 3. Build intermediate resource list
-    const resources = rawResources.map(({ handle, fields }) => ({
+    // 3. Build intermediate resource list (exclude hidden items)
+    const resources = rawResources.filter(({ fields }) => fields.hidden !== 'true').map(({ handle, fields }) => ({
       handle,
       title:        fields.title       || '',
       description:  fields.description || '',
