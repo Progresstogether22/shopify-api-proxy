@@ -134,6 +134,16 @@ export default async function handler(req, res) {
         : fields.members_only === 'false', // old key, now relabelled "Public File": false = not public = members-only
     }));
 
+    // 3b. Sort by publish date, most recent first (undated resources sort last)
+    resources.sort((a, b) => {
+      const aTime = a.publish_date ? Date.parse(a.publish_date) : NaN;
+      const bTime = b.publish_date ? Date.parse(b.publish_date) : NaN;
+      if (isNaN(aTime) && isNaN(bTime)) return 0;
+      if (isNaN(aTime)) return 1;
+      if (isNaN(bTime)) return -1;
+      return bTime - aTime;
+    });
+
     // 4. Fetch YouTube descriptions for video resources with no manual description
     const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
     if (YOUTUBE_API_KEY) {
