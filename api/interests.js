@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       const mfData = await mfRes.json();
       const metafield = mfData.metafields?.[0];
       const interests = metafield ? JSON.parse(metafield.value) : [];
-      return res.status(200).json({ interests });
+      return res.status(200).json({ interests, hasSaved: !!metafield });
     }
 
     if (req.method === 'POST') {
