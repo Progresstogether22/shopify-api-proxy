@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     while (hasMore) {
       const response = await fetch(
-        `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?order_by=${orderBy}&status=live&page=${page}`,
+        `https://www.eventbriteapi.com/v3/organizations/${ORG_ID}/events/?order_by=${orderBy}&status=live,started,ended,completed&page=${page}`,
         {
           method: 'GET',
           headers: {
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     }
 
     const now = new Date();
-    let events = allEvents.filter(ev => ev.status === 'live' || ev.status === 'started');
+    let events = allEvents.filter(ev => ev.status !== 'draft' && ev.status !== 'canceled');
 
     if (type === 'future') {
       events = events.filter(ev => new Date(ev.start.utc) >= now);
