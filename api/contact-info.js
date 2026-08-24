@@ -46,6 +46,12 @@ export default async function handler(req, res) {
     });
 
     const contactData = await contactRes.json();
+
+    if (!contactRes.ok) {
+      const message = Array.isArray(contactData) ? contactData.map(e => e.message).join('; ') : JSON.stringify(contactData);
+      return res.status(502).json({ error: 'Salesforce query failed: ' + message });
+    }
+
     const contact = contactData.records?.[0];
 
     if (!contact) return res.status(404).json({ error: 'Contact not found' });
