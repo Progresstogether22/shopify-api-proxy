@@ -33,14 +33,31 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { email } = req.query;
+  const { email, debug } = req.query;
+
+  if (debug === 'describe') {
+    try {
+      const { access_token, instance_url } = await getSalesforceToken();
+      const descRes = await fetch(`${instance_url}/services/data/v58.0/sobjects/Contact/describe`, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const descData = await descRes.json();
+      const matches = (descData.fields || [])
+        .filter(f => /renewal/i.test(f.label) || /renewal/i.test(f.name))
+        .map(f => ({ name: f.name, label: f.label, type: f.type }));
+      return res.status(200).json(matches);
+    } catch (err) {
+      return res.status(500).json({ error: err.message || 'Describe failed' });
+    }
+  }
+
   if (!email) return res.status(400).json({ error: 'Missing email' });
 
   try {
     const { access_token, instance_url } = await getSalesforceToken();
     const apiBase = `${instance_url}/services/data/v58.0`;
 
-    const query = `SELECT Membership_Start_Date__c, Membership_Renewal_Month__c FROM Contact WHERE Email = '${email.replace(/'/g, "\\'")}' LIMIT 1`;
+    const query = `SELECT Membership_Start_Date__c FROM Contact WHERE Email = '${email.replace(/'/g, "\\'")}' LIMIT 1`;
     const contactRes = await fetch(`${apiBase}/query?q=${encodeURIComponent(query)}`, {
       headers: { Authorization: `Bearer ${access_token}` },
     });
