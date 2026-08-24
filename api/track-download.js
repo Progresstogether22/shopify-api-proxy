@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { email, name, url, title } = req.body;
+  const { email, name, url, title, organisation, jobPosition, consented } = req.body;
   if (!email || !url) return res.status(400).json({ error: 'Missing email or url' });
 
   try {
@@ -70,7 +70,15 @@ export default async function handler(req, res) {
         const newLeadRes = await fetch(`${apiBase}/sobjects/Lead/`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ FirstName: firstName, LastName: lastName, Email: email, Company: 'Unknown', LeadSource: 'Web' }),
+          body: JSON.stringify({
+            FirstName: firstName,
+            LastName: lastName,
+            Email: email,
+            Company: organisation || 'Unknown',
+            Job_Position__c: jobPosition || '',
+            Consented_to_future_contact__c: !!consented,
+            LeadSource: 'Web',
+          }),
         });
         const newLeadData = await newLeadRes.json();
         if (newLeadRes.ok && newLeadData.id) {
