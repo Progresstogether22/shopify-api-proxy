@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     const { access_token, instance_url } = await getSalesforceToken();
     const apiBase = `${instance_url}/services/data/v58.0`;
 
-    const query = `SELECT Membership_Start_Date__c, Next_Renewal_Date__c FROM Contact WHERE Email = '${email.replace(/'/g, "\\'")}' LIMIT 1`;
+    const query = `SELECT Membership_Start_Date__c, Membership_Renewal_Month__c FROM Contact WHERE Email = '${email.replace(/'/g, "\\'")}' LIMIT 1`;
     const contactRes = await fetch(`${apiBase}/query?q=${encodeURIComponent(query)}`, {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       membership_start_date: contact.Membership_Start_Date__c,
-      next_renewal_date: contact.Next_Renewal_Date__c,
+      renewal_month: contact.Membership_Renewal_Month__c,
     });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Failed to fetch contact' });
