@@ -33,7 +33,28 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { email } = req.query;
+  const { email, debug } = req.query;
+
+  if (debug === 'describe') {
+    try {
+      const { access_token, instance_url } = await getSalesforceToken();
+      const objects = ['Contact', 'Lead'];
+      const result = {};
+      for (const obj of objects) {
+        const descRes = await fetch(`${instance_url}/services/data/v58.0/sobjects/${obj}/describe`, {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+        const descData = await descRes.json();
+        result[obj] = (descData.fields || [])
+          .filter(f => /company|organi|job|position|consent|contact/i.test(f.label) || /company|organi|job|position|consent|contact/i.test(f.name))
+          .map(f => ({ name: f.name, label: f.label, type: f.type }));
+      }
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(500).json({ error: err.message || 'Describe failed' });
+    }
+  }
+
   if (!email) return res.status(400).json({ error: 'Missing email' });
 
   try {
