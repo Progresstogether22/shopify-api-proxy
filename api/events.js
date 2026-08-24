@@ -45,8 +45,10 @@ export default async function handler(req, res) {
 
     if (type === 'future') {
       events = events.filter(ev => new Date(ev.start.utc) >= now);
+      events.sort((a, b) => new Date(a.start.utc) - new Date(b.start.utc));
     } else if (type === 'past') {
       events = events.filter(ev => new Date(ev.start.utc) < now);
+      events.sort((a, b) => new Date(b.start.utc) - new Date(a.start.utc));
     }
 
     res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
